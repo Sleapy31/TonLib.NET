@@ -28,8 +28,9 @@ namespace TonLibDotNet
                 {
                     o.UseMainnet = UseMainnet;
                     o.LogTextLimit = 500; // Set to 0 to see full requests/responses
-                    o.VerbosityLevel = 0;
-                    o.Options.KeystoreType = new KeyStoreTypeDirectory(DirectoryForKeys);
+                    o.VerbosityLevel = 2;
+                    o.Options.KeystoreType = new KeyStoreTypeInMemory(); // new KeyStoreTypeDirectory(DirectoryForKeys);
+                    //o.LocalPathMainnet = "local.config.json";
                 });
 
                 services.AddHostedService<SamplesRunner>();
@@ -37,6 +38,7 @@ namespace TonLibDotNet
                 services.AddSingleton<ITonClient, TonClient>();
 
                 var samples = typeof(Program).Assembly.GetTypes().Where(x => x.IsClass && x.IsAssignableTo(typeof(ISample))).ToList();
+               // var samples = typeof(Program).Assembly.GetTypes().Where(x => x.Name == "LibraryExtensibilityPlayground" && x.IsClass && x.IsAssignableTo(typeof(ISample))).ToList();
                 foreach (var sample in samples)
                 {
                     services.AddTransient(typeof(ISample), sample);

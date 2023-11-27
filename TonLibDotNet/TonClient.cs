@@ -87,8 +87,16 @@ namespace TonLibDotNet
                 return null;
             }
 
-            var httpClient = new HttpClient();
-            var fullConfig = await httpClient.GetStringAsync(tonOptions.UseMainnet ? tonOptions.ConfigPathMainnet : tonOptions.ConfigPathTestnet).ConfigureAwait(false);
+            string fullConfig;
+            if (tonOptions.LocalPathMainnet != string.Empty)
+            {
+                fullConfig = File.ReadAllText(tonOptions.LocalPathMainnet);
+            }
+            else
+            {
+                var httpClient = new HttpClient();
+                fullConfig = await httpClient.GetStringAsync(tonOptions.UseMainnet ? tonOptions.ConfigPathMainnet : tonOptions.ConfigPathTestnet).ConfigureAwait(false);
+            }
 
             var jdoc = JsonNode.Parse(fullConfig);
             var servers = jdoc["liteservers"].AsArray();

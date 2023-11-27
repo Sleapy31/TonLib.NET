@@ -14,5 +14,25 @@ namespace TonLibDotNet
         {
             return client.Execute(new GetMasterchainInfo());
         }
+
+        /// <summary>
+        /// Returns <see cref="Transactions"/> from current LiteServer.
+        /// </summary>
+        /// <param name="client">ITonClient instance.</param>
+        /// <seealso href="https://github.com/ton-blockchain/ton/blob/v2023.01/tonlib/tonlib/TonlibClient.cpp#L4670"/>
+        public static Task<Types.Blocks.Transactions> GetBlockTransactions(this ITonClient client, Types.Ton.BlockIdEx id, Types.Blocks.AccountTransactionId after)
+        {
+            return client.Execute(new Requests.Blocks.GetTransactions(id, after));
+        }
+
+        /// <summary>
+        /// Returns <see cref="TransactionsExt"/> from current LiteServer.
+        /// </summary>
+        /// <param name="client">ITonClient instance.</param>
+        /// <seealso href="https://github.com/ton-blockchain/ton/blob/v2023.01/tonlib/tonlib/TonlibClient.cpp#L4670"/>
+        public static Task<Types.Blocks.TransactionsExt> GetBlockTransactionsExt(this ITonClient client, Types.Ton.BlockIdEx id, int mode, int count, Types.Blocks.AccountTransactionId after)
+        {
+            return client.Execute(new Requests.Blocks.GetTransactionsExt(id, mode, count, after));
+        }
     }
 }

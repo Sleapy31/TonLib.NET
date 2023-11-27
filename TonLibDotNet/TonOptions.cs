@@ -16,6 +16,11 @@ namespace TonLibDotNet
         public Uri ConfigPathMainnet { get; set; } = new("https://ton.org/global-config.json");
 
         /// <summary>
+        /// Path to JSON config for mainnet (default value is from string.Empty).
+        /// </summary>
+        public string LocalPathMainnet { get; set; } = string.Empty;
+
+        /// <summary>
         /// 'True' by default. Set to 'false' to use testnet config.
         /// </summary>
         public bool UseMainnet { get; set; } = true;
