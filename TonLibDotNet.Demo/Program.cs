@@ -15,7 +15,7 @@ namespace TonLibDotNet
         // Some tests need mainnet (e.g. domains), some will run only in testnet (e.g. sending coins).
         public const bool UseMainnet = true;
 
-        private const string DirectoryForKeys = "D:/Temp/keys";
+        private const string DirectoryForKeys = "C:/Ton/Temp/Keys";
 
         public static async Task Main(string[] args)
         {
@@ -27,10 +27,12 @@ namespace TonLibDotNet
                 services.Configure<TonOptions>(o =>
                 {
                     o.UseMainnet = UseMainnet;
-                    o.LogTextLimit = 500; // Set to 0 to see full requests/responses
-                    o.VerbosityLevel = 2;
-                    o.Options.KeystoreType = new KeyStoreTypeInMemory(); // new KeyStoreTypeDirectory(DirectoryForKeys);
-                    //o.LocalPathMainnet = "local.config.json";
+                    o.ConfigPathMainnet = new Uri("https://raw.githubusercontent.com/ton-blockchain/ton-blockchain.github.io/4808de0e6f202776f2d43757e0550e3c3cb37942/global.config.json");
+                    o.LogTextLimit = 200; // Set to 0 to see full requests/responses
+                    o.VerbosityLevel = 0;
+                    o.Options.KeystoreType = new KeyStoreTypeDirectory(DirectoryForKeys);
+                    //o.Options.KeystoreType = new KeyStoreTypeInMemory();
+                    o.LocalPathMainnet = "local.config.json";
                 });
 
                 services.AddHostedService<SamplesRunner>();

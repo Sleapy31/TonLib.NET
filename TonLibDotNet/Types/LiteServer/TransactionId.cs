@@ -9,6 +9,7 @@
             Lt = lt;
             Hash = hash;
         }
+        public int Mode { get; set; }
         public string? Account { get; set; }
         public long? Lt { get; set; }
 

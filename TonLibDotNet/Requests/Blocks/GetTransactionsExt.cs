@@ -10,7 +10,7 @@ namespace TonLibDotNet.Requests.Blocks
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Mode =  mode;
             Count = count;
-            After = after ?? throw new ArgumentNullException(nameof(after));            
+            After = after;//?? throw new ArgumentNullException(nameof(after));            
         }
 
         public Types.Ton.BlockIdEx Id { get; set; }

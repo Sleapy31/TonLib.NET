@@ -5,6 +5,7 @@ namespace TonLibDotNet.Types.Blocks
     [TLSchema("blocks.transactions id:ton.blockIdExt req_count:int32 incomplete:Bool transactions:vector<blocks.shortTxId> = blocks.Transactions")]
     public class Transactions : TypeBase
     {
+        public Transactions() { }
         public Transactions(Ton.BlockIdEx id, List<Types.LiteServer.TransactionId> transactions)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
