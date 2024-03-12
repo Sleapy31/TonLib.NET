@@ -8,8 +8,36 @@ namespace TonLibDotNet
     {
         OptionsInfo? OptionsInfo { get; }
 
+		/// <summary>
+		/// Current masterchain height (TonClient synced to LiteServer synced to blockchain).
+		/// </summary>
+		int SyncStateCurrentSeqno { get; }
+
+        /// <summary>
+        /// Initialize TonClient: choose a LiteServer and try to connect to it.
+        /// </summary>
+        /// <remarks>
+        /// Will do nothing, if already connected.
+        /// </remarks>
+        /// <returns>Information about blockchain params, e.g. <see cref="OptionsConfigInfo.DefaultWalletId">DefaultWalletId</see>.</returns>
         Task<OptionsInfo?> InitIfNeeded();
 
+        /// <summary>
+        /// De-initialize TonClient. Next call to <see cref="InitIfNeeded"/> will choose LiteServer again and connect to it.
+        /// </summary>
+        /// <remarks>Useful when you find currently connected LiteServer is not synced, for example.</remarks>
+        void Deinit();
+
+        /// <summary>
+        /// De-initialize and immediately initialize again.
+        /// </summary>
+        /// <remarks>
+        /// Equivalent of:
+        /// <code>
+        ///   Deinit();
+        ///   InitIfNeeded();
+        /// </code>
+        /// </remarks>
         Task<OptionsInfo?> Reinit();
 
         Task<TResponse> Execute<TResponse>(RequestBase<TResponse> request)

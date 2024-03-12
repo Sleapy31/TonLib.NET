@@ -50,6 +50,9 @@ namespace TonLibDotNet
 
         public OptionsInfo? OptionsInfo { get; private set; }
 
+        /// <inheritdoc />
+        public int SyncStateCurrentSeqno { get; private set; }
+
         /// <summary>
         /// Add assembly with additional <see cref="TypeBase"/> classes for LiteServer interaction.
         /// </summary>
@@ -59,6 +62,7 @@ namespace TonLibDotNet
             TonTypeResolver.AdditionalAsseblies.Add(assembly);
         }
 
+        /// <inheritdoc />
         public async Task<OptionsInfo?> InitIfNeeded()
         {
             if (needReinit)
@@ -88,14 +92,18 @@ namespace TonLibDotNet
             }
 
             string fullConfig;
-            if (tonOptions.LocalPathMainnet != string.Empty)
+            var localConfigSource = tonOptions.UseMainnet ? tonOptions.ConfigPathLocalMainnet : tonOptions.ConfigPathLocalTestnet;
+            if (!string.IsNullOrEmpty(localConfigSource))
             {
-                fullConfig = File.ReadAllText(tonOptions.LocalPathMainnet);
+                fullConfig = await File.ReadAllTextAsync(localConfigSource);
+                logger.LogDebug("Used local config file: {Name}", localConfigSource);
             }
             else
             {
-                var httpClient = new HttpClient();
-                fullConfig = await httpClient.GetStringAsync(tonOptions.UseMainnet ? tonOptions.ConfigPathMainnet : tonOptions.ConfigPathTestnet).ConfigureAwait(false);
+                var remoteConfigSource = tonOptions.UseMainnet ? tonOptions.ConfigPathMainnet : tonOptions.ConfigPathTestnet;
+                using var httpClient = new HttpClient();
+                fullConfig = await httpClient.GetStringAsync(remoteConfigSource).ConfigureAwait(false);
+                logger.LogDebug("Used internet config file: {Url}", remoteConfigSource);
             }
 
             var jdoc = JsonNode.Parse(fullConfig);
@@ -111,12 +119,21 @@ namespace TonLibDotNet
             return OptionsInfo;
         }
 
+        /// <inheritdoc />
+        public virtual void Deinit()
+        {
+            logger.LogWarning("De-initializing.");
+            needReinit = true;
+        }
+
+        /// <inheritdoc />
         public Task<OptionsInfo?> Reinit()
         {
             Deinit();
             return InitIfNeeded();
         }
 
+        /// <inheritdoc />
         public async Task<TResponse> Execute<TResponse>(RequestBase<TResponse> request)
             where TResponse : TypeBase
         {
@@ -279,11 +296,16 @@ namespace TonLibDotNet
                         continue;
                     }
 
-                    if (DateTimeOffset.UtcNow < endOfLoop && uss.SyncState is UpdateSyncState.SyncStateInProgress ssip)
+                    if (uss.SyncState is UpdateSyncState.SyncStateInProgress ssip)
                     {
-                        var delay = (ssip.ToSeqno - ssip.CurrentSeqno) < 1000 ? 50 : 500;
-                        await Task.Delay(delay);
-                        continue;
+                        SyncStateCurrentSeqno = ssip.CurrentSeqno;
+
+                        if (DateTimeOffset.UtcNow < endOfLoop)
+                        {
+                            var delay = (ssip.ToSeqno - ssip.CurrentSeqno) < 1000 ? 50 : 500;
+                            await Task.Delay(delay);
+                            continue;
+                        }
                     }
 
                     Deinit();
@@ -366,12 +388,6 @@ namespace TonLibDotNet
 
             Deinit();
             throw new TonClientException(0, "Invalid (unexpected) response type") { ActualAnswer = respObj };
-        }
-
-        protected virtual void Deinit()
-        {
-            logger.LogWarning("De-initializing.");
-            needReinit = true;
         }
 
         protected virtual void Dispose(bool disposing)
