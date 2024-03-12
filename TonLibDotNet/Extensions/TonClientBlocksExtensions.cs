@@ -44,5 +44,15 @@ namespace TonLibDotNet
         {
             return client.Execute(new Requests.Blocks.GetShards(id));
         }
+
+        /// <summary>
+        /// Returns <see cref="Shards"/> from current LiteServer.
+        /// </summary>
+        /// <param name="client">ITonClient instance.</param>
+        /// <seealso href="https://github.com/ton-blockchain/ton/blob/v2023.01/tonlib/tonlib/TonlibClient.cpp#L4670"/>
+        public static Task<Types.Ton.BlockIdEx> LookupBlock(this ITonClient client, int mode, Types.Ton.BlockId id, long lt, int utime)
+        {
+            return client.Execute(new Requests.Blocks.LookupBlock(mode, id, lt, utime));
+        }
     }
 }

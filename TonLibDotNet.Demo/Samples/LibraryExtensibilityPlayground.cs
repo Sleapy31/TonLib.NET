@@ -1,9 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq.Expressions;
 using System.Net.Http;
 using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using TonLibDotNet.Extensions;
 using TonLibDotNet.Internal;
 using TonLibDotNet.Requests;
 using TonLibDotNet.Types;
@@ -27,23 +31,98 @@ namespace TonLibDotNet.Samples
         public async Task Run(bool inMainnet)
         {
             await tonClient.InitIfNeeded();
-            var testa = -4611686018427387904;
-            var testb = new BigInteger(-4611686018427387904);
-            var teste = Convert.ToHexString(new BigInteger(-9223372036854775808).ToByteArray(false, true));
-            var testj = new BigInteger(Convert.FromHexString(teste), false, true);
-            var testc = new BigInteger(Convert.FromHexString("8000000000000000"), false, true);
-            var testd = new BigInteger(Convert.FromHexString("8000000000000000"));
-            // This will fail because TonLib does not have this method.
-            // This is just a demo how you can add new types/requests without waiting for new package release.
-            // To make this happen in your app - call TonClient.RegisterAssembly() early
+            HttpClient httpClient = new();
+
             try
             {
-                Task.Run(async() =>
+                
+                
+                
+                var sw = new Stopwatch();
+                sw.Start();
+                var blockiDd = await tonClient.GetMasterchainInfo();
+                sw.Stop();
+                Console.WriteLine(sw.Elapsed);
+                return;
+                var source = new CancellationTokenSource();
+                Console.WriteLine("START METHOD SUBSCRIBE");
+                var last = await tonClient.Sync();
+                var shards = await tonClient.GetShards(last);
+                Console.WriteLine($"### MASTERCHAIN BLOCK N°{last.Seqno} ###");
+                Task.Run(async () => { await Task.Delay(60000); source.Cancel(); });
+                await Parallel.ForEachAsync(shards.ShardsList, async (shard, token) =>
                 {
-                    var sw = new Stopwatch();
-                    sw.Start();
-                    BlockIdEx last = await tonClient.Sync();
+                    token = source.Token;
+                    int current = shard.Seqno;
+                    string readableShard = Convert.ToHexString(new BigInteger(shard.Shard).ToByteArray(false, true));
+                    while (!token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            var result = await httpClient.GetStringAsync($"http://localhost:8081/v2/blockchain/blocks/({shard.Workchain},{readableShard},{current})/transactions");
+                            //var txs = JsonConvert.DeserializeObject<TonApiTransactions>(result);
+                            Console.WriteLine($"Workchain: {shard.Workchain} | Shard: {readableShard}  |Seqno: {current} | Txs:  - {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}");
+                            current++;
+                        }
+                        catch { }
+                    }
+                });
 
+                Console.WriteLine("SUBSCRIBE METHOD TERMINEE !!");
+
+                //Task.Run(async () =>
+                //{
+                //    Console.WriteLine("START METHOD SUBSCRIBE");
+                //    var last = await tonClient.Sync();
+                //    var shards = await tonClient.GetShards(last);
+                //    Console.WriteLine($"### MASTERCHAIN BLOCK N°{last.Seqno} ###");
+
+                //    await Parallel.ForEachAsync(shards.ShardsList, async (shard, token) =>
+                //    {
+                //        int current = shard.Seqno;
+                //        string readableShard = Convert.ToHexString(new BigInteger(shard.Shard).ToByteArray(false, true));
+                //        while (!token.IsCancellationRequested)
+                //        {
+                //            try
+                //            {
+                //                var result = await httpClient.GetStringAsync($"http://localhost:8081/v2/blockchain/blocks/({shard.Workchain},{readableShard},{current})/transactions");
+                //                //var txs = JsonConvert.DeserializeObject<TonApiTransactions>(result);
+                //                Console.WriteLine($"Workchain: {shard.Workchain} | Shard: {readableShard}  |Seqno: {current} | Txs:  - {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}");
+                //                current++;
+                //            }
+                //            catch { }
+                //        }
+                //    });
+
+                //    Console.WriteLine("SUBSCRIBE METHOD TERMINEE !!");
+                //});
+                //Task.Run(async () =>
+                //{
+                //    Console.WriteLine("START OLD METHOD");
+                //    var last = await tonClient.Sync();
+                //    while (sw.Elapsed < TimeSpan.FromSeconds(90))
+                //    {
+                //        var lastBlock = await tonClient.Sync();
+                //        if (lastBlock.Seqno != last.Seqno)
+                //        {
+                //            last = lastBlock;
+
+                //            var shards = await tonClient.GetShards(lastBlock);
+                //            Console.WriteLine($"### MASTERCHAIN BLOCK N°{lastBlock.Seqno} ###");
+                //            foreach (var shard in shards.ShardsList)
+                //            {
+                //                string readableShard = Convert.ToHexString(new BigInteger(shard.Shard).ToByteArray(false, true));
+                //                var result = await httpClient.GetStringAsync($"http://localhost:8081/v2/blockchain/blocks/({shard.Workchain},{readableShard},{shard.Seqno})/transactions");
+                //                //var txs = JsonConvert.DeserializeObject<TonApiTransactions>(result);
+                //                Console.WriteLine($"Workchain: {shard.Workchain} | Shard: {shard.Shard} / {readableShard} |Seqno: {shard.Seqno} | Txs:  - {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}");
+                //            }
+                //        }
+                //    }
+                //    Console.WriteLine("OLD METHOD TERMINEE !!");
+                //});
+                Task.Run(async () =>
+                {
+                    var last = await tonClient.Sync();
                     while (sw.Elapsed < TimeSpan.FromSeconds(90))
                     {
                         var lastBlock = await tonClient.Sync();
@@ -53,40 +132,22 @@ namespace TonLibDotNet.Samples
 
                             var shards = await tonClient.GetShards(lastBlock);
                             Console.WriteLine($"### MASTERCHAIN BLOCK N°{lastBlock.Seqno} ###");
-                            foreach (var shard in shards.ShardsList)
+                            Parallel.ForEachAsync(shards.ShardsList, async (shard, token) =>
+                            //foreach (var shard in shards.ShardsList)
                             {
                                 string readableShard = Convert.ToHexString(new BigInteger(shard.Shard).ToByteArray(false, true));
                                 TransactionsExt? result = await tonClient.GetBlockTransactionsExt(shard, 0, 1000, null);
-                                Console.WriteLine($"Workchain: {shard.Workchain} | Shard: {shard.Shard} / {readableShard} |Seqno: {shard.Seqno} | Txs: {result.Transactions.Count} - {DateTime.UtcNow.ToString()}");
-                            }
+                                Console.WriteLine($"Workchain: {shard.Workchain} | Shard: {shard.Shard} / {readableShard} |Seqno: {shard.Seqno} | Txs: {result.Transactions.Count} - {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}");
+                            });
                         }
                     }
                     Console.WriteLine("NEW METHOD TERMINEE !!");
                 });
 
-                Task.Run(async() =>
-                {
-                    var sw = new Stopwatch();
-                    sw.Start();
-                    BlockIdEx last = await tonClient.Sync();
-                    var shards = await tonClient.GetShards(last);
-                    int seqno = shards.ShardsList[0].Seqno;
-                    while (sw.Elapsed < TimeSpan.FromSeconds(90))
-                    {
-                        var httpClient = new HttpClient();
-                        try
-                        {
-                            var result = await httpClient.GetStringAsync($"http://localhost:8081/v2/blockchain/blocks/(0,8000000000000000,{seqno})/transactions");
-                            Console.WriteLine($"New block !: {seqno} - {DateTime.UtcNow.ToString()}");
-                            seqno++;
-                        }
-                        catch { }
-                    }
-                    Console.WriteLine("OLD METHOD TERMINEE");
-                });
                 await Task.Delay(90000);
-                Console.WriteLine("TOUTE METHODE TERMINEE");
-                Console.ReadLine();
+                Console.WriteLine("TERMINEE");
+
+
                 //Transactions? resulta = await tonClient.GetBlockTransactions(blockId, 0, 100, null);
                 //foreach (var id in test.ShardsList)
                 //{
